@@ -1,0 +1,336 @@
+# LASER CUTTING SIMULATION - ALUMINUM PLATE
+# CREATED BY Akshansh Mishra - Modified for laser cutting operation
+# This work is licensed under Creative Commons Attribution 4.0 International
+# Single plate with laser cutting along centerline
+
+# Initialize simulation
+units           metal
+dimension       3
+boundary        p p p
+atom_style      atomic
+
+# Define lattice for aluminum
+lattice         fcc 4.05
+
+# LARGER SIMULATION BOX - More atoms
+# 150 x 80 x 10 lattice units
+region          box block 0 150 0 80 0 10
+create_box      1 box
+
+# Create single thick plate
+region          plate block 0 150 0 80 0 10
+create_atoms    1 region plate
+
+# Set mass for aluminum
+mass            1 26.9815
+
+# Define EAM potential for aluminum
+pair_style      eam/alloy
+pair_coeff      * * Al99.eam.alloy Al
+
+# Define edge regions (heat sinks to prevent edge effects)
+region          bottom_edge block 0 150 0 80 0 0.8
+region          top_edge block 0 150 0 80 9.2 10
+region          left_edge block 0 4.0 0 80 0 10
+region          right_edge block 146.0 150 0 80 0 10
+region          front_edge block 0 150 0 4.0 0 10
+region          back_edge block 0 150 76.0 80 0 10
+region          edges union 6 bottom_edge top_edge left_edge right_edge front_edge back_edge
+
+# Define groups
+group           edges region edges
+group           bulk subtract all edges
+
+# LASER CUTTING PATH - Along centerline Y=40
+# Cut width: 4 units (Y = 38-42)
+# Cut depth: Full thickness (Z = 0-10)
+# Laser moves from X=10 to X=140 in 13 positions
+
+region          cut_1 block 10 20 38 42 0 10
+region          cut_2 block 20 30 38 42 0 10
+region          cut_3 block 30 40 38 42 0 10
+region          cut_4 block 40 50 38 42 0 10
+region          cut_5 block 50 60 38 42 0 10
+region          cut_6 block 60 70 38 42 0 10
+region          cut_7 block 70 80 38 42 0 10
+region          cut_8 block 80 90 38 42 0 10
+region          cut_9 block 90 100 38 42 0 10
+region          cut_10 block 100 110 38 42 0 10
+region          cut_11 block 110 120 38 42 0 10
+region          cut_12 block 120 130 38 42 0 10
+region          cut_13 block 130 140 38 42 0 10
+
+# Heat affected zone (HAZ) - Wider region around cut
+region          haz_1 block 10 20 35 45 0 10
+region          haz_2 block 20 30 35 45 0 10
+region          haz_3 block 30 40 35 45 0 10
+region          haz_4 block 40 50 35 45 0 10
+region          haz_5 block 50 60 35 45 0 10
+region          haz_6 block 60 70 35 45 0 10
+region          haz_7 block 70 80 35 45 0 10
+region          haz_8 block 80 90 35 45 0 10
+region          haz_9 block 90 100 35 45 0 10
+region          haz_10 block 100 110 35 45 0 10
+region          haz_11 block 110 120 35 45 0 10
+region          haz_12 block 120 130 35 45 0 10
+region          haz_13 block 130 140 35 45 0 10
+
+# Define cutting groups
+group           cut_1 region cut_1
+group           cut_2 region cut_2
+group           cut_3 region cut_3
+group           cut_4 region cut_4
+group           cut_5 region cut_5
+group           cut_6 region cut_6
+group           cut_7 region cut_7
+group           cut_8 region cut_8
+group           cut_9 region cut_9
+group           cut_10 region cut_10
+group           cut_11 region cut_11
+group           cut_12 region cut_12
+group           cut_13 region cut_13
+
+# Define HAZ groups
+group           haz_1 region haz_1
+group           haz_2 region haz_2
+group           haz_3 region haz_3
+group           haz_4 region haz_4
+group           haz_5 region haz_5
+group           haz_6 region haz_6
+group           haz_7 region haz_7
+group           haz_8 region haz_8
+group           haz_9 region haz_9
+group           haz_10 region haz_10
+group           haz_11 region haz_11
+group           haz_12 region haz_12
+group           haz_13 region haz_13
+
+# Union of all cut and HAZ regions
+group           all_cut union cut_1 cut_2 cut_3 cut_4 cut_5 cut_6 cut_7 cut_8 cut_9 cut_10 cut_11 cut_12 cut_13
+group           all_haz union haz_1 haz_2 haz_3 haz_4 haz_5 haz_6 haz_7 haz_8 haz_9 haz_10 haz_11 haz_12 haz_13
+
+# Initial velocities at room temperature
+velocity        all create 300.0 87654 dist gaussian
+
+# Integration fixes
+fix             thermostat_edges edges nvt temp 300.0 300.0 0.1
+fix             dynamics_bulk bulk nve
+timestep        0.001
+
+# Computes for analysis
+compute         cut_temp all_cut temp
+compute         ke_per_atom all ke/atom
+compute         centro all centro/atom fcc
+compute         msd all msd
+compute         pe_per_atom all pe/atom
+
+# Per atom temperature in Kelvin
+variable        atom_temp atom c_ke_per_atom/1.5/8.617343e-5
+
+# Output
+thermo_style    custom step temp pe ke etotal press c_cut_temp atoms
+thermo          100
+
+# Dump files for visualization
+dump            1 all custom 200 laser_cutting.lammpstrj id type x y z c_ke_per_atom c_centro v_atom_temp
+dump_modify     1 element Al
+
+dump            temp all custom 300 temperature_cutting.lammpstrj id type x y z v_atom_temp
+dump_modify     temp element Al
+
+restart         5000 restart.cutting
+
+# Count initial atoms
+variable        natoms equal atoms
+print           "Initial number of atoms: ${natoms}"
+
+# Initial equilibration
+print "INITIAL EQUILIBRATION"
+run             2000
+
+# LASER CUTTING PROCESS
+# High temperature (4500K) to simulate vaporization/ablation
+# Al melting point: 933K, Boiling point: 2743K
+# Using 4500K to ensure material removal simulation
+
+print "STARTING LASER CUTTING OPERATION"
+print "Laser cutting path: Y = 38-42 (4 unit kerf width)"
+print "Cut temperature: 4500K (above boiling point)"
+
+# Position 1
+print "Laser at X = 10-20"
+fix             laser_1 cut_1 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_1 haz_1 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_1
+unfix           haz_heat_1
+# Delete highly energetic atoms (simulating vaporization)
+delete_atoms    group cut_1 compress yes
+run             500
+
+# Position 2
+print "Laser at X = 20-30"
+fix             laser_2 cut_2 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_2 haz_2 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_2
+unfix           haz_heat_2
+delete_atoms    group cut_2 compress yes
+run             500
+
+# Position 3
+print "Laser at X = 30-40"
+fix             laser_3 cut_3 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_3 haz_3 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_3
+unfix           haz_heat_3
+delete_atoms    group cut_3 compress yes
+run             500
+
+# Position 4
+print "Laser at X = 40-50"
+fix             laser_4 cut_4 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_4 haz_4 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_4
+unfix           haz_heat_4
+delete_atoms    group cut_4 compress yes
+run             500
+
+# Position 5
+print "Laser at X = 50-60"
+fix             laser_5 cut_5 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_5 haz_5 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_5
+unfix           haz_heat_5
+delete_atoms    group cut_5 compress yes
+run             500
+
+# Position 6
+print "Laser at X = 60-70"
+fix             laser_6 cut_6 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_6 haz_6 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_6
+unfix           haz_heat_6
+delete_atoms    group cut_6 compress yes
+run             500
+
+# Position 7
+print "Laser at X = 70-80"
+fix             laser_7 cut_7 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_7 haz_7 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_7
+unfix           haz_heat_7
+delete_atoms    group cut_7 compress yes
+run             500
+
+# Position 8
+print "Laser at X = 80-90"
+fix             laser_8 cut_8 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_8 haz_8 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_8
+unfix           haz_heat_8
+delete_atoms    group cut_8 compress yes
+run             500
+
+# Position 9
+print "Laser at X = 90-100"
+fix             laser_9 cut_9 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_9 haz_9 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_9
+unfix           haz_heat_9
+delete_atoms    group cut_9 compress yes
+run             500
+
+# Position 10
+print "Laser at X = 100-110"
+fix             laser_10 cut_10 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_10 haz_10 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_10
+unfix           haz_heat_10
+delete_atoms    group cut_10 compress yes
+run             500
+
+# Position 11
+print "Laser at X = 110-120"
+fix             laser_11 cut_11 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_11 haz_11 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_11
+unfix           haz_heat_11
+delete_atoms    group cut_11 compress yes
+run             500
+
+# Position 12
+print "Laser at X = 120-130"
+fix             laser_12 cut_12 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_12 haz_12 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_12
+unfix           haz_heat_12
+delete_atoms    group cut_12 compress yes
+run             500
+
+# Position 13
+print "Laser at X = 130-140"
+fix             laser_13 cut_13 langevin 300.0 4500.0 0.02 48279
+fix             haz_heat_13 haz_13 langevin 300.0 1200.0 0.05 48280
+run             2500
+unfix           laser_13
+unfix           haz_heat_13
+delete_atoms    group cut_13 compress yes
+run             500
+
+print "LASER CUTTING COMPLETE"
+
+# Count remaining atoms
+variable        natoms_final equal atoms
+print           "Remaining atoms after cutting: ${natoms_final}"
+
+# COOLING PHASE
+print "COOLING PHASE"
+
+# Gradual cooling to prevent thermal stress
+fix             cool_1 all_haz langevin 1200.0 800.0 0.1 48279
+run             8000
+unfix           cool_1
+
+fix             cool_2 all_haz langevin 800.0 500.0 0.1 48279
+run             10000
+unfix           cool_2
+
+fix             cool_3 all_haz langevin 500.0 300.0 0.1 48279
+run             12000
+unfix           cool_3
+
+# Final equilibration
+print "FINAL EQUILIBRATION"
+run             10000
+
+# Final structure dump
+dump            final all custom 500 final_cut_structure.lammpstrj id type x y z c_centro v_atom_temp c_pe_per_atom
+dump_modify     final element Al
+
+run             5000
+
+write_data      final_laser_cut.data
+
+print "SIMULATION COMPLETE"
+print "Simulation parameters:"
+print "  Initial atoms: ${natoms}"
+print "  Final atoms: ${natoms_final}"
+print "  Plate size: 150 x 80 x 10 lattice units"
+print "  Kerf width: 4 units"
+print "  Cut length: 130 units"
+print "  Peak temperature: 4500K"
+print "Visualization tips:"
+print "  - Use v_atom_temp for temperature distribution"
+print "  - Use c_centro for defect visualization"
+print "  - Look for the cut kerf in the final structure"
