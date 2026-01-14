@@ -1,6 +1,6 @@
 # Atomistic Modeling of Laser Cutting Process
 
-![Laser Cutting Simulation](laser_cutting.png)
+![Laser Cutting Simulation](https://raw.githubusercontent.com/Computational-Materials-Research-Group/Atomistic-modeling-of-Laser-Cutting-process/main/laser_cutting.png)
 
 ## Overview
 
@@ -115,7 +115,7 @@ You can modify the simulation by adjusting:
 
 ## Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/akshansh11/Atomistic-modeling-of-Laser-Cutting-process/issues).
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/Computational-Materials-Research-Group/Atomistic-modeling-of-Laser-Cutting-process/issues).
 
 ## License
 
@@ -138,7 +138,7 @@ This work is licensed under a <a rel="license" href="http://creativecommons.org/
 **Akshansh Mishra**
 
 - GitHub: [@akshansh11](https://github.com/akshansh11)
-- Project Link: [Atomistic-modeling-of-Laser-Cutting-process](https://github.com/akshansh11/Atomistic-modeling-of-Laser-Cutting-process)
+- Project Link: [Atomistic-modeling-of-Laser-Cutting-process](https://github.com/Computational-Materials-Research-Group/Atomistic-modeling-of-Laser-Cutting-process)
 
 ## Acknowledgments
 
