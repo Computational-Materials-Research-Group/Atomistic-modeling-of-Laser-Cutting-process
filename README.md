@@ -1,6 +1,6 @@
 # Atomistic Modeling of Laser Cutting Process
 
-!(laser_cutting.png)
+![Laser Cutting Simulation](laser_cutting.png)
 
 ## Overview
 
